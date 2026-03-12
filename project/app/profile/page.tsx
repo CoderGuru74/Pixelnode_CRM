@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -8,61 +8,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Mail, Phone, MapPin, Building, Calendar, Users, Shield } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
-
-interface Employee {
-  id: string;
-  employee_id: string;
-  name: string;
-  email: string;
-  phone: string;
-  address: string;
-  role: string;
-  department: string;
-  reporting_manager: string;
-  joining_date: string;
-  is_admin: boolean;
-}
+import { Mail, Phone, MapPin, Building, Calendar, Users, Shield, Key, Bell } from 'lucide-react';
+import { useAuth } from '@/components/providers/auth-provider';
 
 export default function ProfilePage() {
-  const [employee, setEmployee] = useState<Employee | null>(null);
+  const { employee } = useAuth();
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    fetchProfile();
+    setMounted(true);
   }, []);
-
-  const fetchProfile = async () => {
-    const { data, error } = await supabase
-      .from('employees')
-      .select('*')
-      .eq('email', 'user@pixelnode.com') // This should be replaced with actual user email from auth
-      .single();
-
-    if (data) {
-      setEmployee(data);
-    } else {
-      // Fallback to mock data if user not found or table doesn't exist
-      const mockEmployee: Employee = {
-        id: '1',
-        employee_id: 'EMP001',
-        name: 'Shubham Raj',
-        email: 'shubham@pixelnode.com',
-        phone: '+91 98765 43210',
-        address: '123 Tech Street, Bangalore, Karnataka 560001',
-        role: 'Senior Full Stack Developer',
-        department: 'Engineering',
-        reporting_manager: 'John Doe',
-        joining_date: '2023-01-15',
-        is_admin: true,
-      };
-      setEmployee(mockEmployee);
-    }
-  };
-
-  if (!employee) {
-    return <div className="p-8">Loading...</div>;
-  }
 
   const getInitials = (name: string) => {
     return name
@@ -80,6 +35,26 @@ export default function ProfilePage() {
     });
   };
 
+  if (!mounted) {
+    return (
+      <div className="p-8">
+        <div className="text-center">
+          <p>Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!employee) {
+    return (
+      <div className="p-8">
+        <div className="text-center">
+          <p>Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-8 space-y-8">
       <div>
@@ -89,6 +64,7 @@ export default function ProfilePage() {
         </p>
       </div>
 
+      {/* Profile Header */}
       <Card className="border-none shadow-sm">
         <CardContent className="pt-6">
           <div className="flex flex-col md:flex-row gap-8">
@@ -106,7 +82,9 @@ export default function ProfilePage() {
             <div className="flex-1 space-y-6">
               <div>
                 <h2 className="text-2xl font-bold">{employee.name}</h2>
-                <p className="text-muted-foreground">{employee.role}</p>
+                <p className="text-muted-foreground">
+                  {employee.email === 'pixelnodeofficial@gmail.com' ? 'Head of Development' : employee.role}
+                </p>
                 {employee.is_admin && (
                   <span className="inline-flex items-center gap-1 mt-2 px-2 py-1 text-xs font-medium rounded-full bg-primary/10 text-primary">
                     <Shield className="h-3 w-3" />
@@ -115,47 +93,18 @@ export default function ProfilePage() {
                 )}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50">
-                    <Mail className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Email</p>
-                    <p className="text-sm font-medium">{employee.email}</p>
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="text-center p-4 border rounded-lg">
+                  <div className="text-2xl font-bold text-primary">{employee.employee_id}</div>
+                  <div className="text-sm text-muted-foreground">Employee ID</div>
                 </div>
-
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-50">
-                    <Phone className="h-5 w-5 text-green-600" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Phone</p>
-                    <p className="text-sm font-medium">{employee.phone}</p>
-                  </div>
+                <div className="text-center p-4 border rounded-lg">
+                  <div className="text-2xl font-bold text-primary">{employee.department}</div>
+                  <div className="text-sm text-muted-foreground">Department</div>
                 </div>
-
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-50">
-                    <Building className="h-5 w-5 text-orange-600" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Department</p>
-                    <p className="text-sm font-medium">{employee.department}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-50">
-                    <Calendar className="h-5 w-5 text-purple-600" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Joined</p>
-                    <p className="text-sm font-medium">
-                      {formatDate(employee.joining_date)}
-                    </p>
-                  </div>
+                <div className="text-center p-4 border rounded-lg">
+                  <div className="text-2xl font-bold text-primary">{formatDate(employee.joining_date)}</div>
+                  <div className="text-sm text-muted-foreground">Joined</div>
                 </div>
               </div>
             </div>
@@ -163,116 +112,135 @@ export default function ProfilePage() {
         </CardContent>
       </Card>
 
+      {/* Profile Tabs */}
       <Tabs defaultValue="personal" className="space-y-6">
-        <TabsList>
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="personal">Personal Information</TabsTrigger>
-          <TabsTrigger value="organization">Organization Details</TabsTrigger>
+          <TabsTrigger value="organization">Organization</TabsTrigger>
           <TabsTrigger value="security">Security</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="personal" className="space-y-4">
+        <TabsContent value="personal">
           <Card className="border-none shadow-sm">
             <CardHeader>
-              <CardTitle>Contact Information</CardTitle>
+              <CardTitle>Personal Information</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
-                  <Input id="name" defaultValue={employee.name} />
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="firstName">First Name</Label>
+                    <Input id="firstName" defaultValue={employee.name.split(' ')[0]} />
+                  </div>
+                  <div>
+                    <Label htmlFor="email">Email Address</Label>
+                    <Input id="email" type="email" defaultValue={employee.email} disabled />
+                  </div>
+                  <div>
+                    <Label htmlFor="phone">Phone Number</Label>
+                    <Input id="phone" defaultValue={employee.phone || ''} />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" defaultValue={employee.email} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
-                  <Input id="phone" defaultValue={employee.phone} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="employee_id">Employee ID</Label>
-                  <Input id="employee_id" defaultValue={employee.employee_id} disabled />
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="lastName">Last Name</Label>
+                    <Input id="lastName" defaultValue={employee.name.split(' ')[1] || ''} />
+                  </div>
+                  <div>
+                    <Label htmlFor="role">Role</Label>
+                    <Input id="role" defaultValue={employee.email === 'pixelnodeofficial@gmail.com' ? 'Head of Development' : employee.role} disabled />
+                  </div>
+                  <div>
+                    <Label htmlFor="address">Address</Label>
+                    <Input id="address" defaultValue={employee.address || ''} />
+                  </div>
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="address">Address</Label>
-                <Input id="address" defaultValue={employee.address} />
+              <div className="flex justify-end">
+                <Button>Save Changes</Button>
               </div>
-              <Button>Save Changes</Button>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="organization" className="space-y-4">
+        <TabsContent value="organization">
           <Card className="border-none shadow-sm">
             <CardHeader>
               <CardTitle>Organization Details</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="role">Role</Label>
-                  <Input id="role" defaultValue={employee.role} disabled />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="department">Department</Label>
-                  <Input id="department" defaultValue={employee.department} disabled />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="manager">Reporting Manager</Label>
-                  <Input
-                    id="manager"
-                    defaultValue={employee.reporting_manager}
-                    disabled
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="joining_date">Joining Date</Label>
-                  <Input
-                    id="joining_date"
-                    defaultValue={formatDate(employee.joining_date)}
-                    disabled
-                  />
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="space-y-4">
-                <h3 className="text-sm font-medium">Team Information</h3>
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50">
-                    <Users className="h-5 w-5 text-blue-600" />
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="department">Department</Label>
+                    <Input id="department" defaultValue={employee.department} disabled />
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Team Size</p>
-                    <p className="text-sm font-medium">12 members</p>
+                    <Label htmlFor="employeeId">Employee ID</Label>
+                    <Input id="employeeId" defaultValue={employee.employee_id} disabled />
                   </div>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="reportingManager">Reporting Manager</Label>
+                    <Input id="reportingManager" defaultValue={employee.reporting_manager || 'Not assigned'} disabled />
+                  </div>
+                  <div>
+                    <Label htmlFor="joiningDate">Joining Date</Label>
+                    <Input id="joiningDate" defaultValue={formatDate(employee.joining_date)} disabled />
+                  </div>
+                </div>
+              </div>
+              <Separator />
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Team Members</h3>
+                <div className="text-muted-foreground">
+                  Team member information will be displayed here once organization data is fully integrated.
                 </div>
               </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="security" className="space-y-4">
+        <TabsContent value="security">
           <Card className="border-none shadow-sm">
             <CardHeader>
-              <CardTitle>Change Password</CardTitle>
+              <CardTitle>Security Settings</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="current_password">Current Password</Label>
-                <Input id="current_password" type="password" />
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <Key className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <div className="font-medium">Change Password</div>
+                      <div className="text-sm text-muted-foreground">
+                        Update your account password
+                      </div>
+                    </div>
+                  </div>
+                  <Button variant="outline">Change</Button>
+                </div>
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <Bell className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <div className="font-medium">Notification Preferences</div>
+                      <div className="text-sm text-muted-foreground">
+                        Manage how you receive notifications
+                      </div>
+                    </div>
+                  </div>
+                  <Button variant="outline">Configure</Button>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="new_password">New Password</Label>
-                <Input id="new_password" type="password" />
+              <Separator />
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Login Activity</h3>
+                <div className="text-muted-foreground">
+                  Recent login activity and session information will be displayed here.
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirm_password">Confirm New Password</Label>
-                <Input id="confirm_password" type="password" />
-              </div>
-              <Button>Update Password</Button>
             </CardContent>
           </Card>
         </TabsContent>
@@ -280,3 +248,4 @@ export default function ProfilePage() {
     </div>
   );
 }
+              

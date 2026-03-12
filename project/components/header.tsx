@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Bell, User } from 'lucide-react';
+import { Bell, User, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -12,11 +12,15 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { useAuth } from '@/components/providers/auth-provider';
 
 export function Header() {
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [mounted, setMounted] = useState(false);
+  const { user, employee, signOut } = useAuth();
 
   useEffect(() => {
+    setMounted(true);
     const timer = setInterval(() => {
       setCurrentTime(new Date());
     }, 1000);
@@ -42,6 +46,40 @@ export function Header() {
     });
   };
 
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase();
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    window.location.href = '/login';
+  };
+
+  // Prevent hydration mismatch
+  if (!mounted) {
+    return (
+      <header className="flex h-16 items-center justify-between border-b bg-white px-8">
+        <div>
+          <div className="text-2xl font-semibold text-primary">
+            Loading...
+          </div>
+          <div className="text-xs text-muted-foreground">
+            Loading...
+          </div>
+        </div>
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" className="relative">
+            <Bell className="h-5 w-5" />
+          </Button>
+        </div>
+      </header>
+    );
+  }
+
   return (
     <header className="flex h-16 items-center justify-between border-b bg-white px-8">
       <div>
@@ -64,22 +102,30 @@ export function Header() {
             <Button variant="ghost" className="flex items-center gap-2">
               <Avatar className="h-8 w-8">
                 <AvatarFallback className="bg-primary text-primary-foreground text-sm">
-                  SR
+                  {employee?.name ? getInitials(employee.name) : 'U'}
                 </AvatarFallback>
               </Avatar>
               <div className="text-left">
-                <div className="text-sm font-medium">Shubham Raj</div>
-                <div className="text-xs text-muted-foreground">Admin</div>
+                <div className="text-sm font-medium">{employee?.name || 'User'}</div>
+                <div className="text-xs text-muted-foreground">
+                  {employee?.is_admin ? 'Admin' : employee?.role || 'Employee'}
+                </div>
               </div>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Profile</DropdownMenuItem>
-            <DropdownMenuItem>Settings</DropdownMenuItem>
+            <DropdownMenuItem>
+              <User className="mr-2 h-4 w-4" />
+              Profile
+            </DropdownMenuItem>
+            <DropdownMenuItem>
+              Settings
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive">
+            <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
+              <LogOut className="mr-2 h-4 w-4" />
               Log out
             </DropdownMenuItem>
           </DropdownMenuContent>

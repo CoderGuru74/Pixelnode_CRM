@@ -72,25 +72,34 @@ export default function LeavesPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const { error } = await supabase.from('leaves').insert([
-      {
-        ...formData,
-        status: 'Pending',
-      },
-    ]);
+    try {
+      const { error } = await supabase.from('leaves').insert([
+        {
+          leave_type: formData.leave_type,
+          start_date: formData.start_date,
+          end_date: formData.end_date,
+          reason: formData.reason,
+          status: 'Pending',
+        },
+      ]);
 
-    if (error) {
-      toast.error('Failed to submit leave request');
-    } else {
-      toast.success('Leave request submitted successfully');
-      setOpen(false);
-      setFormData({
-        leave_type: 'Casual',
-        start_date: '',
-        end_date: '',
-        reason: '',
-      });
-      fetchLeaves();
+      if (error) {
+        console.error('Error submitting leave request:', error);
+        toast.error(`Failed to submit leave request: ${error.message}`);
+      } else {
+        toast.success('Leave request submitted successfully');
+        setOpen(false);
+        setFormData({
+          leave_type: 'Casual',
+          start_date: '',
+          end_date: '',
+          reason: '',
+        });
+        fetchLeaves();
+      }
+    } catch (error) {
+      console.error('Unexpected error submitting leave request:', error);
+      toast.error('An unexpected error occurred');
     }
   };
 

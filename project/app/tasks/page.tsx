@@ -34,6 +34,7 @@ interface Task {
   status: 'Todo' | 'In Progress' | 'In Review' | 'Completed';
   priority: 'Low' | 'Medium' | 'High';
   due_date: string | null;
+  department: string | null;
 }
 
 export default function TasksPage() {
@@ -44,6 +45,7 @@ export default function TasksPage() {
     description: '',
     priority: 'Medium',
     due_date: '',
+    department: '',
   });
 
   useEffect(() => {
@@ -90,6 +92,7 @@ export default function TasksPage() {
           description: '',
           priority: 'Medium',
           due_date: '',
+          department: '',
         });
         fetchTasks();
       }
@@ -228,6 +231,27 @@ export default function TasksPage() {
                       }
                     />
                   </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="department">Department</Label>
+                  <Select
+                    value={formData.department}
+                    onValueChange={(value) =>
+                      setFormData((prev) => ({ ...prev, department: value }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select department" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Graphics & UI/UX">Graphics & UI/UX</SelectItem>
+                      <SelectItem value="Full Stack Development">Full Stack Development</SelectItem>
+                      <SelectItem value="Sales">Sales</SelectItem>
+                      <SelectItem value="Digital Marketing">Digital Marketing</SelectItem>
+                      <SelectItem value="Branding & Media">Branding & Media</SelectItem>
+                      <SelectItem value="Automation">Automation</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <DialogFooter>

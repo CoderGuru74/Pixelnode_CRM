@@ -1,6 +1,7 @@
 'use client';
 
 import { SidebarProvider } from './sidebar-provider';
+import { AuthProvider } from './auth-provider';
 
 interface ProvidersProps {
   children: React.ReactNode;
@@ -8,8 +9,10 @@ interface ProvidersProps {
 
 export function Providers({ children }: ProvidersProps) {
   return (
-    <SidebarProvider>
-      {children}
-    </SidebarProvider>
+    <AuthProvider>
+      <SidebarProvider>
+        {children}
+      </SidebarProvider>
+    </AuthProvider>
   );
 }

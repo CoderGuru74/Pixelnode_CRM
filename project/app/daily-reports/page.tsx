@@ -61,27 +61,33 @@ export default function DailyReportsPage() {
 
     const today = new Date().toISOString().split('T')[0];
 
-    const { error } = await supabase.from('daily_reports').insert([
-      {
-        date: today,
-        content: formData.content,
-        tasks_completed: formData.tasks_completed,
-        hours_worked: formData.hours_worked
-          ? parseFloat(formData.hours_worked)
-          : null,
-      },
-    ]);
+    try {
+      const { error } = await supabase.from('daily_reports').insert([
+        {
+          date: today,
+          content: formData.content,
+          tasks_completed: formData.tasks_completed,
+          hours_worked: formData.hours_worked
+            ? parseFloat(formData.hours_worked)
+            : null,
+        },
+      ]);
 
-    if (error) {
-      toast.error('Failed to submit daily report');
-    } else {
-      toast.success('Daily report submitted successfully');
-      setFormData({
-        content: '',
-        tasks_completed: '',
-        hours_worked: '',
-      });
-      fetchReports();
+      if (error) {
+        console.error('Error submitting daily report:', error);
+        toast.error(`Failed to submit daily report: ${error.message}`);
+      } else {
+        toast.success('Daily report submitted successfully');
+        setFormData({
+          content: '',
+          tasks_completed: '',
+          hours_worked: '',
+        });
+        fetchReports();
+      }
+    } catch (error) {
+      console.error('Unexpected error submitting daily report:', error);
+      toast.error('An unexpected error occurred');
     }
   };
 

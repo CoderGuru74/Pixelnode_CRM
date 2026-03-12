@@ -11,6 +11,7 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'PixelNode - CRM & Employee Management Portal',
   description: 'Professional CRM and Employee Management System for PixelNode',
+  metadataBase: new URL('http://localhost:3000'),
   openGraph: {
     images: [
       {
