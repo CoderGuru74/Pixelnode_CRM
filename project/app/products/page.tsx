@@ -22,50 +22,56 @@ export default function ProductsPage() {
   }, []);
 
   const fetchProducts = async () => {
-    const { data, error } = await supabase
-      .from('products')
-      .select('*')
-      .order('created_at', { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-    if (data) {
-      setProducts(data);
-    } else {
-      // Fallback to mock data if table doesn't exist yet
-      const mockProducts: Product[] = [
-        {
-          id: '1',
-          name: 'Website Development',
-          category: 'Web Services',
-          price: '$5,000',
-          sales: 45,
-          status: 'Active',
-        },
-        {
-          id: '2',
-          name: 'Mobile App Development',
-          category: 'Mobile Services',
-          price: '$8,000',
-          sales: 32,
-          status: 'Active',
-        },
-        {
-          id: '3',
-          name: 'UI/UX Design',
-          category: 'Design Services',
-          price: '$3,000',
-          sales: 68,
-          status: 'Active',
-        },
-        {
-          id: '4',
-          name: 'Digital Marketing',
-          category: 'Marketing Services',
-          price: '$2,500',
-          sales: 54,
-          status: 'Active',
-        },
-      ];
-      setProducts(mockProducts);
+      if (error) {
+        console.error('Error fetching products:', error);
+        // Fallback to mock data if table doesn't exist yet
+        const mockProducts: Product[] = [
+          {
+            id: '1',
+            name: 'Website Development',
+            category: 'Web Services',
+            price: '$5,000',
+            sales: 45,
+            status: 'Active',
+          },
+          {
+            id: '2',
+            name: 'Mobile App Development',
+            category: 'Mobile Services',
+            price: '$8,000',
+            sales: 32,
+            status: 'Active',
+          },
+          {
+            id: '3',
+            name: 'UI/UX Design',
+            category: 'Design Services',
+            price: '$3,000',
+            sales: 68,
+            status: 'Active',
+          },
+          {
+            id: '4',
+            name: 'Digital Marketing',
+            category: 'Marketing Services',
+            price: '$2,500',
+            sales: 54,
+            status: 'Active',
+          },
+        ];
+        setProducts(mockProducts);
+      } else {
+        setProducts(data || []);
+      }
+    } catch (error) {
+      console.error('Unexpected error fetching products:', error);
+      setProducts([]);
     }
   };
 

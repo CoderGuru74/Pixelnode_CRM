@@ -20,6 +20,7 @@ export default function AccountPage() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    password: '',
     phone: '',
     address: '',
     role: '',
@@ -32,28 +33,58 @@ export default function AccountPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const { error } = await supabase.from('employees').insert([
-      {
-        ...formData,
-        is_admin: false,
-      },
-    ]);
-
-    if (error) {
-      toast.error('Failed to create employee');
-    } else {
-      toast.success('Employee created successfully');
-      setFormData({
-        name: '',
-        email: '',
-        phone: '',
-        address: '',
-        role: '',
-        department: '',
-        employee_id: '',
-        reporting_manager: '',
-        joining_date: '',
+    try {
+      // First create the user in Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            name: formData.name,
+          }
+        }
       });
+
+      if (authError) {
+        console.error('Error creating auth user:', authError);
+        toast.error(`Failed to create user account: ${authError.message}`);
+        return;
+      }
+
+      // Then create the employee record
+      const { error: employeeError } = await supabase.from('employees').insert([
+        {
+          ...formData,
+          is_admin: false,
+          user_id: authData.user?.id, // Link to auth user
+        },
+      ]);
+
+      if (employeeError) {
+        console.error('Error creating employee record:', employeeError);
+        toast.error(`Failed to create employee record: ${employeeError.message}`);
+        // Optionally, you might want to delete the auth user if employee creation fails
+        if (authData.user?.id) {
+          await supabase.auth.admin.deleteUser(authData.user.id);
+        }
+      } else {
+        toast.success('Employee created successfully');
+        setFormData({
+          name: '',
+          email: '',
+          password: '',
+          phone: '',
+          address: '',
+          role: '',
+          department: '',
+          employee_id: '',
+          reporting_manager: '',
+          joining_date: '',
+        });
+      }
+    } catch (error) {
+      console.error('Unexpected error in registration:', error);
+      toast.error('An unexpected error occurred');
     }
   };
 
@@ -114,6 +145,19 @@ export default function AccountPage() {
                   onChange={(e) => handleChange('phone', e.target.value)}
                   placeholder="+91 98765 43210"
                   required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password">Password *</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => handleChange('password', e.target.value)}
+                  placeholder="Enter password"
+                  required
+                  minLength={6}
                 />
               </div>
 
@@ -201,6 +245,7 @@ export default function AccountPage() {
                   setFormData({
                     name: '',
                     email: '',
+                    password: '',
                     phone: '',
                     address: '',
                     role: '',

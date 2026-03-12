@@ -2,6 +2,9 @@ import './globals.css';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { Toaster } from 'sonner';
+import { Providers } from '@/components/providers';
+import { Sidebar } from '@/components/sidebar';
+import { Header } from '@/components/header';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -33,8 +36,18 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        {children}
-        <Toaster position="top-right" />
+        <Providers>
+          <div className="flex h-screen overflow-hidden bg-secondary/30">
+            <Sidebar />
+            <div className="flex flex-1 flex-col overflow-hidden lg:ml-0">
+              <Header />
+              <main className="flex-1 overflow-y-auto">
+                {children}
+              </main>
+            </div>
+          </div>
+          <Toaster position="top-right" />
+        </Providers>
       </body>
     </html>
   );

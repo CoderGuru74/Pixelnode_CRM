@@ -33,20 +33,31 @@ export default function ProfilePage() {
   }, []);
 
   const fetchProfile = async () => {
-    const mockEmployee: Employee = {
-      id: '1',
-      employee_id: 'EMP001',
-      name: 'Shubham Raj',
-      email: 'shubham@pixelnode.com',
-      phone: '+91 98765 43210',
-      address: '123 Tech Street, Bangalore, Karnataka 560001',
-      role: 'Senior Full Stack Developer',
-      department: 'Engineering',
-      reporting_manager: 'John Doe',
-      joining_date: '2023-01-15',
-      is_admin: true,
-    };
-    setEmployee(mockEmployee);
+    const { data, error } = await supabase
+      .from('employees')
+      .select('*')
+      .eq('email', 'user@pixelnode.com') // This should be replaced with actual user email from auth
+      .single();
+
+    if (data) {
+      setEmployee(data);
+    } else {
+      // Fallback to mock data if user not found or table doesn't exist
+      const mockEmployee: Employee = {
+        id: '1',
+        employee_id: 'EMP001',
+        name: 'Shubham Raj',
+        email: 'shubham@pixelnode.com',
+        phone: '+91 98765 43210',
+        address: '123 Tech Street, Bangalore, Karnataka 560001',
+        role: 'Senior Full Stack Developer',
+        department: 'Engineering',
+        reporting_manager: 'John Doe',
+        joining_date: '2023-01-15',
+        is_admin: true,
+      };
+      setEmployee(mockEmployee);
+    }
   };
 
   if (!employee) {

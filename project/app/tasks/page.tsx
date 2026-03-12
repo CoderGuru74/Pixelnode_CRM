@@ -51,52 +51,71 @@ export default function TasksPage() {
   }, []);
 
   const fetchTasks = async () => {
-    const { data, error } = await supabase
-      .from('tasks')
-      .select('*')
-      .order('created_at', { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-    if (data) {
-      setTasks(data);
+      if (error) {
+        console.error('Error fetching tasks:', error);
+      } else {
+        setTasks(data || []);
+      }
+    } catch (error) {
+      console.error('Unexpected error fetching tasks:', error);
+      setTasks([]);
     }
   };
 
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const { error } = await supabase.from('tasks').insert([
-      {
-        ...formData,
-        status: 'Todo',
-      },
-    ]);
+    try {
+      const { error } = await supabase.from('tasks').insert([
+        {
+          ...formData,
+          status: 'Todo',
+        },
+      ]);
 
-    if (error) {
-      toast.error('Failed to create task');
-    } else {
-      toast.success('Task created successfully');
-      setOpen(false);
-      setFormData({
-        title: '',
-        description: '',
-        priority: 'Medium',
-        due_date: '',
-      });
-      fetchTasks();
+      if (error) {
+        console.error('Error creating task:', error);
+        toast.error(`Failed to create task: ${error.message}`);
+      } else {
+        toast.success('Task created successfully');
+        setOpen(false);
+        setFormData({
+          title: '',
+          description: '',
+          priority: 'Medium',
+          due_date: '',
+        });
+        fetchTasks();
+      }
+    } catch (error) {
+      console.error('Unexpected error creating task:', error);
+      toast.error('An unexpected error occurred');
     }
   };
 
   const updateTaskStatus = async (taskId: string, newStatus: Task['status']) => {
-    const { error } = await supabase
-      .from('tasks')
-      .update({ status: newStatus })
-      .eq('id', taskId);
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .update({ status: newStatus })
+        .eq('id', taskId);
 
-    if (error) {
-      toast.error('Failed to update task');
-    } else {
-      toast.success('Task updated');
-      fetchTasks();
+      if (error) {
+        console.error('Error updating task:', error);
+        toast.error(`Failed to update task: ${error.message}`);
+      } else {
+        toast.success('Task updated');
+        fetchTasks();
+      }
+    } catch (error) {
+      console.error('Unexpected error updating task:', error);
+      toast.error('An unexpected error occurred');
     }
   };
 

@@ -43,19 +43,26 @@ export default function AttendancePage() {
   const fetchAttendance = async () => {
     const today = new Date().toISOString().split('T')[0];
 
-    const { data, error } = await supabase
-      .from('attendance')
-      .select('*')
-      .order('date', { ascending: false })
-      .limit(30);
+    try {
+      const { data, error } = await supabase
+        .from('attendance')
+        .select('*')
+        .order('date', { ascending: false })
+        .limit(30);
 
-    if (data) {
-      setAttendance(data);
-      const todayRecord = data.find((record) => record.date === today);
-      if (todayRecord) {
-        setTodayAttendance(todayRecord);
-        setIsCheckedIn(todayRecord.check_in !== null && todayRecord.check_out === null);
+      if (error) {
+        console.error('Error fetching attendance:', error);
+      } else {
+        setAttendance(data || []);
+        const todayRecord = data?.find((record) => record.date === today);
+        if (todayRecord) {
+          setTodayAttendance(todayRecord);
+          setIsCheckedIn(todayRecord.check_in !== null && todayRecord.check_out === null);
+        }
       }
+    } catch (error) {
+      console.error('Unexpected error fetching attendance:', error);
+      setAttendance([]);
     }
   };
 
@@ -63,19 +70,25 @@ export default function AttendancePage() {
     const today = new Date().toISOString().split('T')[0];
     const now = new Date().toISOString();
 
-    const { error } = await supabase
-      .from('attendance')
-      .insert({
-        date: today,
-        check_in: now,
-        status: 'Present',
-      });
+    try {
+      const { error } = await supabase
+        .from('attendance')
+        .insert({
+          date: today,
+          check_in: now,
+          status: 'Present',
+        });
 
-    if (error) {
-      toast.error('Failed to check in');
-    } else {
-      toast.success('Checked in successfully');
-      fetchAttendance();
+      if (error) {
+        console.error('Error checking in:', error);
+        toast.error(`Failed to check in: ${error.message}`);
+      } else {
+        toast.success('Checked in successfully');
+        fetchAttendance();
+      }
+    } catch (error) {
+      console.error('Unexpected error checking in:', error);
+      toast.error('An unexpected error occurred');
     }
   };
 
@@ -87,19 +100,25 @@ export default function AttendancePage() {
     const checkOutTime = new Date(now);
     const hours = (checkOutTime.getTime() - checkInTime.getTime()) / (1000 * 60 * 60);
 
-    const { error } = await supabase
-      .from('attendance')
-      .update({
-        check_out: now,
-        total_hours: hours.toFixed(2),
-      })
-      .eq('id', todayAttendance.id);
+    try {
+      const { error } = await supabase
+        .from('attendance')
+        .update({
+          check_out: now,
+          total_hours: hours.toFixed(2),
+        })
+        .eq('id', todayAttendance.id);
 
-    if (error) {
-      toast.error('Failed to check out');
-    } else {
-      toast.success('Checked out successfully');
-      fetchAttendance();
+      if (error) {
+        console.error('Error checking out:', error);
+        toast.error(`Failed to check out: ${error.message}`);
+      } else {
+        toast.success('Checked out successfully');
+        fetchAttendance();
+      }
+    } catch (error) {
+      console.error('Unexpected error checking out:', error);
+      toast.error('An unexpected error occurred');
     }
   };
 
