@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Bell, User, LogOut, Shield, Fingerprint, Mail, Building, ChevronDown } from 'lucide-react';
+import { Bell, User, LogOut, Shield, Fingerprint, Mail, Building, ChevronDown, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -19,13 +19,12 @@ import {
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/components/providers/auth-provider';
-import { cn } from '@/lib/utils';
 
 export function Header() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [mounted, setMounted] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
-  const { user, employee, signOut, isAdmin } = useAuth();
+  const { user, employee, signOut, isAdmin, loading } = useAuth();
 
   useEffect(() => {
     setMounted(true);
@@ -42,12 +41,14 @@ export function Header() {
 
   if (!mounted) return <header className="h-16 border-b bg-white/80 backdrop-blur-md px-8" />;
 
-  // Dynamic Role logic: Admin gets a special title, others get their DB role
-  const displayRole = isAdmin ? 'Head of Agency' : (employee?.role || 'Team Member');
+  // SYNCING DATA FROM DATABASE
+  const userName = employee?.name || user?.email?.split('@')[0] || "User";
+  const userRole = isAdmin ? 'Head of Agency' : (employee?.role || 'Team Member');
+  const userDept = employee?.department || 'General';
 
   return (
     <>
-      <header className="flex h-16 items-center justify-between border-b bg-white px-8 sticky top-0 z-30">
+      <header className="flex h-16 items-center justify-between border-b bg-white px-8 sticky top-0 z-30 shadow-sm">
         <div className="flex items-center gap-6">
           <div className="flex flex-col">
             <span className="text-xl font-bold tracking-tight text-slate-900 tabular-nums">
@@ -57,33 +58,29 @@ export function Header() {
               {formatDate(currentTime)}
             </span>
           </div>
-          <div className="h-8 w-[1px] bg-slate-100 hidden md:block" />
-          <div className="hidden md:flex items-center gap-2 px-3 py-1 bg-slate-50 rounded-full border border-slate-100">
-            <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">System Online</span>
-          </div>
         </div>
 
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" className="relative text-slate-400 hover:bg-[#7C3AED]/5 hover:text-[#7C3AED] transition-colors">
-            <Bell className="h-5 w-5" />
-            <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-[#7C3AED] border-2 border-white" />
-          </Button>
+          {/* Status Indicator */}
+          <div className="hidden md:flex items-center gap-2 mr-4 px-3 py-1 bg-green-50 rounded-full border border-green-100">
+            <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+            <span className="text-[10px] font-bold text-green-700 uppercase">Live Sync</span>
+          </div>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="flex items-center gap-3 pl-2 pr-1 py-1 h-11 hover:bg-slate-50 rounded-xl transition-all border border-transparent hover:border-slate-100">
+              <Button variant="ghost" className="flex items-center gap-3 pl-2 pr-1 py-1 h-11 hover:bg-slate-50 rounded-xl transition-all border border-slate-100">
                 <Avatar className="h-8 w-8 ring-2 ring-[#7C3AED]/10">
                   <AvatarFallback className="bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] text-white text-[10px] font-black">
-                    {getInitials(employee?.name || 'User')}
+                    {getInitials(userName)}
                   </AvatarFallback>
                 </Avatar>
                 <div className="text-left hidden lg:block">
                   <p className="text-sm font-bold text-slate-900 leading-none mb-1">
-                    {employee?.name || 'Access User'}
+                    {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : userName}
                   </p>
                   <p className="text-[10px] font-extrabold text-[#7C3AED] uppercase tracking-wider">
-                    {displayRole}
+                    {userRole}
                   </p>
                 </div>
                 <ChevronDown className="h-4 w-4 text-slate-400 ml-1 mr-2" />
@@ -94,10 +91,10 @@ export function Header() {
               <DropdownMenuLabel className="p-3">
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center text-[#7C3AED] font-bold">
-                    {getInitials(employee?.name || 'U')}
+                    {getInitials(userName)}
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-sm font-black text-slate-900">{employee?.name}</span>
+                    <span className="text-sm font-black text-slate-900">{userName}</span>
                     <span className="text-[10px] text-slate-500 truncate max-w-[150px]">{employee?.email || user?.email}</span>
                   </div>
                 </div>
@@ -112,17 +109,17 @@ export function Header() {
                   </div>
                   <div className="flex flex-col">
                     <span className="text-xs font-bold text-slate-700">My Profile</span>
-                    <span className="text-[9px] text-slate-400 uppercase font-bold">Personal ID & Details</span>
+                    <span className="text-[9px] text-slate-400 uppercase font-bold">ID & Verification</span>
                   </div>
                 </DropdownMenuItem>
 
-                <DropdownMenuItem className="flex items-center gap-3 p-3 rounded-xl cursor-pointer hover:bg-slate-50 focus:bg-slate-50 transition-colors">
+                <DropdownMenuItem className="flex items-center gap-3 p-3 rounded-xl cursor-default transition-colors">
                   <div className="h-8 w-8 rounded-lg bg-purple-50 flex items-center justify-center">
                     <Building className="h-4 w-4 text-[#7C3AED]" />
                   </div>
                   <div className="flex flex-col">
                     <span className="text-xs font-bold text-slate-700">Department</span>
-                    <span className="text-[9px] text-slate-400 uppercase font-bold">{employee?.department || 'Operations'}</span>
+                    <span className="text-[9px] text-[#7C3AED] uppercase font-black">{userDept}</span>
                   </div>
                 </DropdownMenuItem>
               </div>
@@ -147,7 +144,7 @@ export function Header() {
             <div className="absolute -bottom-10 left-8">
                <Avatar className="h-20 w-20 border-4 border-white shadow-lg">
                   <AvatarFallback className="bg-slate-100 text-[#7C3AED] font-black text-xl">
-                    {getInitials(employee?.name || 'U')}
+                    {getInitials(userName)}
                   </AvatarFallback>
                </Avatar>
             </div>
@@ -155,10 +152,10 @@ export function Header() {
           
           <div className="pt-14 pb-8 px-8 space-y-6">
             <div className="space-y-1">
-              <h3 className="text-2xl font-black text-slate-900">{employee?.name}</h3>
+              <h3 className="text-2xl font-black text-slate-900">{userName}</h3>
               <p className="text-sm font-bold text-[#7C3AED] flex items-center gap-2">
                 <Shield className="h-4 w-4" />
-                {displayRole}
+                {userRole}
               </p>
             </div>
 
@@ -175,10 +172,20 @@ export function Header() {
 
               <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center gap-4">
                 <div className="h-10 w-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
+                  <Building className="h-5 w-5 text-slate-400" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">Department</span>
+                  <span className="text-sm font-bold text-slate-700">{userDept}</span>
+                </div>
+              </div>
+
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center gap-4">
+                <div className="h-10 w-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
                   <Fingerprint className="h-5 w-5 text-slate-400" />
                 </div>
                 <div className="flex flex-col w-full">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">Employee ID Token</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">Employee ID</span>
                   <code className="text-[11px] font-mono text-[#7C3AED] mt-1 bg-white px-2 py-1 rounded border border-[#7C3AED]/10 truncate">
                     {user?.id}
                   </code>
@@ -187,7 +194,7 @@ export function Header() {
             </div>
 
             <Button onClick={() => setShowProfile(false)} className="w-full h-12 rounded-xl bg-slate-900 hover:bg-black text-white font-bold transition-all shadow-lg shadow-slate-200">
-               Close Profile
+               Back to Workspace
             </Button>
           </div>
         </DialogContent>

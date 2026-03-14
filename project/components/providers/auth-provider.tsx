@@ -29,19 +29,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const userEmail = currentUser.email?.toLowerCase() || '';
 
-      // 1. Check for Admin Bypass
-      if (userEmail === 'pixelnodeofficial@gmail.com') {
-        setEmployee({
-          name: 'Shubham Raj',
-          is_admin: true,
-          role: 'Admin',
-          email: userEmail,
-          user_id: currentUser.id
-        });
-        return;
-      }
-
-      // 2. Try to get Employee from DB
+      // 1. Try to get Employee from DB first
       const { data, error } = await supabase
         .from('employees')
         .select('*')
@@ -49,18 +37,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
 
       if (!error && data) {
+        // SUCCESS: Data found in database
         setEmployee(data);
-      } else {
-        // 3. Fallback: Create a temporary profile so the app doesn't hang
-        setEmployee({ 
-          name: userEmail.split('@')[0], 
-          role: 'Employee', 
-          is_admin: false,
-          email: userEmail 
-        });
+        return;
       }
+
+      // 2. Fallback for Master Admin (PixelNode Official)
+      if (userEmail === 'pixelnodeofficial@gmail.com') {
+        setEmployee({
+          name: 'Shubham Raj',
+          is_admin: true,
+          role: 'Head of Agency',
+          department: 'Administration',
+          email: userEmail,
+          user_id: currentUser.id
+        });
+        return;
+      }
+
+      // 3. Fallback: Data not found in DB yet
+      // We use "Syncing..." instead of "General" so you know the DB is missing this user
+      setEmployee({ 
+        name: userEmail.split('@')[0], 
+        role: 'Verifying Role...', 
+        department: 'Syncing Dept...', 
+        is_admin: false,
+        email: userEmail 
+      });
+      
     } catch (e) {
-      console.error("Auth Fetch Error:", e);
+      console.error("Critical Auth Sync Error:", e);
     }
   };
 
@@ -73,9 +79,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           await fetchProfile(session.user);
         }
       } catch (err) {
-        console.error("Auth Init Error:", err);
+        console.error("Auth Initialization Error:", err);
       } finally {
-        setLoading(false); // CRITICAL: Stop loading even if there's an error
+        // Ensure the loading screen disappears
+        setLoading(false);
       }
     };
 
@@ -89,19 +96,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(null);
         setEmployee(null);
       }
-      setLoading(false); // CRITICAL: Stop loading on any auth change
+      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setEmployee(null);
-    window.location.href = '/signin';
+    try {
+      await supabase.auth.signOut();
+      
+      // Clean manual cookies
+      document.cookie.split(";").forEach((c) => {
+        document.cookie = c
+          .replace(/^ +/, "")
+          .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+      });
+
+      setUser(null);
+      setEmployee(null);
+      window.location.replace('/signin');
+    } catch (error) {
+      console.error("Signout Error:", error);
+      window.location.replace('/signin');
+    }
   };
 
+  // Ultimate source of truth for Admin status
   const finalIsAdmin = employee?.is_admin === true || user?.email?.toLowerCase() === 'pixelnodeofficial@gmail.com';
 
   return (
