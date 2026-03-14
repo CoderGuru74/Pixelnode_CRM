@@ -28,11 +28,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const fetchProfile = async (currentUser: User) => {
     try {
       const userEmail = currentUser.email?.toLowerCase() || '';
-      console.log("Current Logged In Email:", userEmail); // DEBUG: Check your console!
 
-      // 1. MASTER ADMIN BYPASS (Hardcoded Fix)
+      // 1. Check for Admin Bypass
       if (userEmail === 'pixelnodeofficial@gmail.com') {
-        console.log("Admin Bypass Triggered for:", userEmail);
         setEmployee({
           name: 'Shubham Raj',
           is_admin: true,
@@ -40,10 +38,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email: userEmail,
           user_id: currentUser.id
         });
-        return; 
+        return;
       }
 
-      // 2. REGULAR DB FETCH
+      // 2. Try to get Employee from DB
       const { data, error } = await supabase
         .from('employees')
         .select('*')
@@ -53,6 +51,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!error && data) {
         setEmployee(data);
       } else {
+        // 3. Fallback: Create a temporary profile so the app doesn't hang
         setEmployee({ 
           name: userEmail.split('@')[0], 
           role: 'Employee', 
@@ -61,20 +60,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
       }
     } catch (e) {
-      console.error("Auth Error:", e);
+      console.error("Auth Fetch Error:", e);
     }
   };
 
   useEffect(() => {
     const initAuth = async () => {
-      setLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        setUser(session.user);
-        await fetchProfile(session.user);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          setUser(session.user);
+          await fetchProfile(session.user);
+        }
+      } catch (err) {
+        console.error("Auth Init Error:", err);
+      } finally {
+        setLoading(false); // CRITICAL: Stop loading even if there's an error
       }
-      setLoading(false);
     };
+
     initAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -85,7 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(null);
         setEmployee(null);
       }
-      setLoading(false);
+      setLoading(false); // CRITICAL: Stop loading on any auth change
     });
 
     return () => subscription.unsubscribe();
@@ -93,13 +97,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
-    // Force clear all local state
     setUser(null);
     setEmployee(null);
     window.location.href = '/signin';
   };
 
-  // FORCE ADMIN IF EMAIL MATCHES
   const finalIsAdmin = employee?.is_admin === true || user?.email?.toLowerCase() === 'pixelnodeofficial@gmail.com';
 
   return (
