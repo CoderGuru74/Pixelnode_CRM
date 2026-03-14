@@ -30,7 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setEmployee({
           name: 'Shubham Raj',
           is_admin: true,
-          role: 'Admin', // Added role for your sidebar check
+          role: 'Admin',
           department: 'Administration',
           email: currentUser.email
         });
@@ -74,7 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     initAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
         setUser(session.user);
         await fetchProfile(session.user);
@@ -90,10 +90,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    // Clear cookies manually to support the middleware fix
-    document.cookie = "sb-access-token=; Path=/; Max-Age=0;";
-    window.location.href = '/signin';
+    try {
+      // 1. Sign out of the Supabase Client
+      await supabase.auth.signOut();
+
+      // 2. Clear ALL Supabase cookies manually to prevent Middleware from re-logging in
+      const cookies = document.cookie.split(";");
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i];
+        const eqPos = cookie.indexOf("=");
+        const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
+        
+        // Target any cookie that starts with 'sb-' (Supabase standard)
+        if (name.startsWith('sb-')) {
+          document.cookie = `${name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;`;
+        }
+      }
+
+      // 3. Reset state
+      setUser(null);
+      setEmployee(null);
+
+      // 4. Force a clean redirect and clear browser history of the dashboard
+      window.location.replace('/signin');
+    } catch (error) {
+      console.error("Logout Error:", error);
+      window.location.replace('/signin');
+    }
   };
 
   return (
