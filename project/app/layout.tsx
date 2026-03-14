@@ -3,30 +3,13 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { Toaster } from 'sonner';
 import { Providers } from '@/components/providers';
-import { Sidebar } from '@/components/sidebar';
-import { Header } from '@/components/header';
+import { ProvidersWrapper } from '@/components/providers-wrapper';
 
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'PixelNode - CRM & Employee Management Portal',
-  description: 'Professional CRM and Employee Management System for PixelNode',
-  metadataBase: new URL('http://localhost:3000'),
-  openGraph: {
-    images: [
-      {
-        url: 'https://bolt.new/static/og_default.png',
-      },
-    ],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    images: [
-      {
-        url: 'https://bolt.new/static/og_default.png',
-      },
-    ],
-  },
+  title: 'PixelNode - CRM',
+  description: 'Professional CRM for PixelNode',
 };
 
 export default function RootLayout({
@@ -35,20 +18,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
         <Providers>
-          <div className="flex h-screen overflow-hidden bg-secondary/30">
-            <Sidebar />
-            <div className="flex flex-1 flex-col overflow-hidden lg:ml-0">
-              <Header />
-              <main className="flex-1 overflow-y-auto">
-                {children}
-              </main>
-            </div>
-          </div>
-          <Toaster position="top-right" />
+          <ProvidersWrapper>
+            {children}
+          </ProvidersWrapper>
         </Providers>
+        <Toaster position="top-right" richColors />
       </body>
     </html>
   );

@@ -13,74 +13,41 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { UserPlus } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { createEmployeeAction } from '@/app/actions/admin';
 import { toast } from 'sonner';
 
 export default function AccountPage() {
   const [formData, setFormData] = useState({
-    name: '',
+    full_name: '',
     email: '',
     password: '',
     phone: '',
     address: '',
     role: '',
     department: '',
-    employee_id: '',
-    reporting_manager: '',
-    joining_date: '',
+    emp_id: '',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
-      // First create the user in Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: {
-          data: {
-            name: formData.name,
-          }
-        }
-      });
+      const result = await createEmployeeAction(formData);
 
-      if (authError) {
-        console.error('Error creating auth user:', authError);
-        toast.error(`Failed to create user account: ${authError.message}`);
-        return;
-      }
-
-      // Then create the employee record
-      const { error: employeeError } = await supabase.from('employees').insert([
-        {
-          ...formData,
-          is_admin: false,
-          user_id: authData.user?.id, // Link to auth user
-        },
-      ]);
-
-      if (employeeError) {
-        console.error('Error creating employee record:', employeeError);
-        toast.error(`Failed to create employee record: ${employeeError.message}`);
-        // Optionally, you might want to delete the auth user if employee creation fails
-        if (authData.user?.id) {
-          await supabase.auth.admin.deleteUser(authData.user.id);
-        }
-      } else {
-        toast.success('Employee created successfully');
+      if (result.success) {
+        toast.success(result.message || 'Employee created successfully');
         setFormData({
-          name: '',
+          full_name: '',
           email: '',
           password: '',
           phone: '',
           address: '',
           role: '',
           department: '',
-          employee_id: '',
-          reporting_manager: '',
-          joining_date: '',
+          emp_id: '',
         });
+      } else {
+        toast.error(result.error || 'Failed to create employee');
       }
     } catch (error) {
       console.error('Unexpected error in registration:', error);
@@ -115,11 +82,11 @@ export default function AccountPage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Full Name *</Label>
+                <Label htmlFor="full_name">Full Name *</Label>
                 <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => handleChange('name', e.target.value)}
+                  id="full_name"
+                  value={formData.full_name}
+                  onChange={(e) => handleChange('full_name', e.target.value)}
                   placeholder="John Doe"
                   required
                 />
@@ -162,11 +129,11 @@ export default function AccountPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="employee_id">Employee ID *</Label>
+                <Label htmlFor="emp_id">Employee ID *</Label>
                 <Input
-                  id="employee_id"
-                  value={formData.employee_id}
-                  onChange={(e) => handleChange('employee_id', e.target.value)}
+                  id="emp_id"
+                  value={formData.emp_id}
+                  onChange={(e) => handleChange('emp_id', e.target.value)}
                   placeholder="EMP012"
                   required
                 />
@@ -214,26 +181,6 @@ export default function AccountPage() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="reporting_manager">Reporting Manager</Label>
-                <Input
-                  id="reporting_manager"
-                  value={formData.reporting_manager}
-                  onChange={(e) => handleChange('reporting_manager', e.target.value)}
-                  placeholder="Manager Name"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="joining_date">Joining Date *</Label>
-                <Input
-                  id="joining_date"
-                  type="date"
-                  value={formData.joining_date}
-                  onChange={(e) => handleChange('joining_date', e.target.value)}
-                  required
-                />
-              </div>
             </div>
 
             <div className="flex gap-3">
@@ -243,16 +190,14 @@ export default function AccountPage() {
                 variant="outline"
                 onClick={() =>
                   setFormData({
-                    name: '',
+                    full_name: '',
                     email: '',
                     password: '',
                     phone: '',
                     address: '',
                     role: '',
                     department: '',
-                    employee_id: '',
-                    reporting_manager: '',
-                    joining_date: '',
+                    emp_id: '',
                   })
                 }
               >

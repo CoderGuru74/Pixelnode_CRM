@@ -30,9 +30,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Calendar as CalendarIcon, Plus } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, Check, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
+import { useAuth } from '@/components/providers/auth-provider';
 
 interface Leave {
   id: string;
@@ -42,9 +43,12 @@ interface Leave {
   reason: string;
   status: 'Pending' | 'Approved' | 'Rejected';
   created_at: string;
+  employee_name?: string;
+  employee_email?: string;
 }
 
 export default function LeavesPage() {
+  const { employee } = useAuth();
   const [leaves, setLeaves] = useState<Leave[]>([]);
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -54,18 +58,92 @@ export default function LeavesPage() {
     reason: '',
   });
 
+  const isAdmin = employee?.email === 'pixelnodeofficial@gmail.com';
+
   useEffect(() => {
     fetchLeaves();
   }, []);
 
   const fetchLeaves = async () => {
-    const { data, error } = await supabase
-      .from('leaves')
-      .select('*')
-      .order('created_at', { ascending: false });
+    try {
+      if (isAdmin) {
+        // Admin sees all leaves with employee info
+        const { data, error } = await supabase
+          .from('leaves')
+          .select(`
+            *,
+            profiles!inner(
+              full_name,
+              email
+            )
+          `)
+          .order('created_at', { ascending: false });
 
-    if (data) {
-      setLeaves(data);
+        if (error) {
+          console.error('Error fetching leaves:', error);
+        } else {
+          const formattedLeaves = data.map(leave => ({
+            ...leave,
+            employee_name: leave.profiles.full_name,
+            employee_email: leave.profiles.email,
+          }));
+          setLeaves(formattedLeaves);
+        }
+      } else {
+        // Employee sees only their own leaves
+        const { data, error } = await supabase
+          .from('leaves')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('Error fetching leaves:', error);
+        } else {
+          setLeaves(data);
+        }
+      }
+    } catch (error) {
+      console.error('Unexpected error fetching leaves:', error);
+    }
+  };
+
+  const handleApprove = async (leaveId: string) => {
+    try {
+      const { error } = await supabase
+        .from('leaves')
+        .update({ status: 'Approved' })
+        .eq('id', leaveId);
+
+      if (error) {
+        console.error('Error approving leave:', error);
+        toast.error('Failed to approve leave');
+      } else {
+        toast.success('Leave approved successfully');
+        fetchLeaves();
+      }
+    } catch (error) {
+      console.error('Unexpected error approving leave:', error);
+      toast.error('An unexpected error occurred');
+    }
+  };
+
+  const handleReject = async (leaveId: string) => {
+    try {
+      const { error } = await supabase
+        .from('leaves')
+        .update({ status: 'Rejected' })
+        .eq('id', leaveId);
+
+      if (error) {
+        console.error('Error rejecting leave:', error);
+        toast.error('Failed to reject leave');
+      } else {
+        toast.success('Leave rejected successfully');
+        fetchLeaves();
+      }
+    } catch (error) {
+      console.error('Unexpected error rejecting leave:', error);
+      toast.error('An unexpected error occurred');
     }
   };
 
@@ -142,19 +220,22 @@ export default function LeavesPage() {
     <div className="p-8 space-y-8">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-primary">Leave Management</h1>
+          <h1 className="text-3xl font-bold text-primary">
+            {isAdmin ? 'Leave Approvals' : 'Leave Management'}
+          </h1>
           <p className="text-muted-foreground mt-1">
-            Request and track your leave applications
+            {isAdmin ? 'Review and approve employee leave requests' : 'Request and track your leave applications'}
           </p>
         </div>
 
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Request Leave
-            </Button>
-          </DialogTrigger>
+        {!isAdmin && (
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Request Leave
+              </Button>
+            </DialogTrigger>
           <DialogContent>
             <form onSubmit={handleSubmit}>
               <DialogHeader>
@@ -236,6 +317,14 @@ export default function LeavesPage() {
             </form>
           </DialogContent>
         </Dialog>
+        )}
+
+        {/* Admin approval dialog */}
+        {isAdmin && (
+          <div className="text-sm text-muted-foreground">
+            {stats.pending} pending requests
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -284,24 +373,34 @@ export default function LeavesPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                {isAdmin && <TableHead>Employee</TableHead>}
                 <TableHead>Type</TableHead>
                 <TableHead>Start Date</TableHead>
                 <TableHead>End Date</TableHead>
                 <TableHead>Days</TableHead>
                 <TableHead>Reason</TableHead>
                 <TableHead>Status</TableHead>
+                {isAdmin && <TableHead>Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {leaves.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground">
+                  <TableCell colSpan={isAdmin ? 8 : 6} className="text-center text-muted-foreground">
                     No leave requests found
                   </TableCell>
                 </TableRow>
               ) : (
                 leaves.map((leave) => (
                   <TableRow key={leave.id}>
+                    {isAdmin && (
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{leave.employee_name}</div>
+                          <div className="text-sm text-muted-foreground">{leave.employee_email}</div>
+                        </div>
+                      </TableCell>
+                    )}
                     <TableCell className="font-medium">
                       {leave.leave_type}
                     </TableCell>
@@ -322,6 +421,28 @@ export default function LeavesPage() {
                         {leave.status}
                       </span>
                     </TableCell>
+                    {isAdmin && (
+                      <TableCell>
+                        {leave.status === 'Pending' && (
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              onClick={() => handleApprove(leave.id)}
+                              className="bg-green-600 hover:bg-green-700"
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleReject(leave.id)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))
               )}

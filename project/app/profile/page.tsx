@@ -10,14 +10,27 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Mail, Phone, MapPin, Building, Calendar, Users, Shield, Key, Bell } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
+import { supabase } from '@/lib/supabase';
+import { toast } from 'sonner';
 
 export default function ProfilePage() {
   const { employee } = useAuth();
   const [mounted, setMounted] = useState(false);
+  const [formData, setFormData] = useState({
+    phone: '',
+    address: '',
+  });
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    if (employee) {
+      setFormData({
+        phone: employee.phone || '',
+        address: employee.address || '',
+      });
+    }
+  }, [employee]);
 
   const getInitials = (name: string) => {
     return name
@@ -33,6 +46,34 @@ export default function ProfilePage() {
       day: 'numeric',
       year: 'numeric',
     });
+  };
+
+  const handleSaveChanges = async () => {
+    if (!employee) return;
+    
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          phone: formData.phone,
+          address: formData.address,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', employee.user_id);
+
+      if (error) {
+        console.error('Error updating profile:', error);
+        toast.error('Failed to update profile');
+      } else {
+        toast.success('Profile updated successfully');
+      }
+    } catch (error) {
+      console.error('Unexpected error updating profile:', error);
+      toast.error('An unexpected error occurred');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   if (!mounted) {
@@ -138,7 +179,12 @@ export default function ProfilePage() {
                   </div>
                   <div>
                     <Label htmlFor="phone">Phone Number</Label>
-                    <Input id="phone" defaultValue={employee.phone || ''} />
+                    <Input 
+                      id="phone" 
+                      value={formData.phone}
+                      onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                      placeholder="Enter your phone number"
+                    />
                   </div>
                 </div>
                 <div className="space-y-4">
@@ -152,12 +198,19 @@ export default function ProfilePage() {
                   </div>
                   <div>
                     <Label htmlFor="address">Address</Label>
-                    <Input id="address" defaultValue={employee.address || ''} />
+                    <Input 
+                      id="address" 
+                      value={formData.address}
+                      onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                      placeholder="Enter your address"
+                    />
                   </div>
                 </div>
               </div>
               <div className="flex justify-end">
-                <Button>Save Changes</Button>
+                <Button onClick={handleSaveChanges} disabled={isSaving}>
+                  {isSaving ? 'Saving...' : 'Save Changes'}
+                </Button>
               </div>
             </CardContent>
           </Card>

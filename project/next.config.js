@@ -6,9 +6,8 @@ const nextConfig = {
   images: { 
     unoptimized: true 
   },
+  // Note: experimental.serverActions removed as it is default in Next.js 14+
   webpack: (config) => {
-    // This suppresses the "Critical dependency: the request of a dependency is an expression" 
-    // warning caused by @supabase/realtime-js.
     config.module.exprContextCritical = false;
     return config;
   },

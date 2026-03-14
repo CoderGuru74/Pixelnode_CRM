@@ -13,11 +13,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/components/providers/auth-provider';
+import { useRouter } from 'next/navigation';
 
 export function Header() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [mounted, setMounted] = useState(false);
   const { user, employee, signOut } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
     setMounted(true);
@@ -55,8 +57,13 @@ export function Header() {
   };
 
   const handleSignOut = async () => {
-    await signOut();
-    window.location.href = '/login';
+    try {
+      await signOut();
+      // Clear any local state if needed
+      router.push('/signin');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
   };
 
   // Prevent hydration mismatch
