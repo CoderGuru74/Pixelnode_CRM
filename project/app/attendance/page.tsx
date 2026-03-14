@@ -1,292 +1,153 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Clock, LogIn, LogOut } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Clock, Loader2, RefreshCcw, LogIn, LogOut } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/components/providers/auth-provider';
 import { toast } from 'sonner';
 
-interface AttendanceRecord {
-  id: string;
-  date: string;
-  status: string;
-  check_in: string | null;
-  check_out: string | null;
-  total_hours: number | null;
-}
-
 export default function AttendancePage() {
-  const [currentTime, setCurrentTime] = useState(new Date());
-  const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
-  const [todayAttendance, setTodayAttendance] = useState<AttendanceRecord | null>(null);
-  const [isCheckedIn, setIsCheckedIn] = useState(false);
+  const { user } = useAuth();
+  const [attendance, setAttendance] = useState<any[]>([]);
+  const [activeSession, setActiveSession] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [btnLoading, setBtnLoading] = useState(false);
+
+  const isAdmin = user?.email === 'pixelnodeofficial@gmail.com';
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
-
-    fetchAttendance();
-
-    return () => clearInterval(timer);
-  }, []);
+    if (user) fetchAttendance();
+  }, [user]);
 
   const fetchAttendance = async () => {
-    const today = new Date().toISOString().split('T')[0];
-
     try {
-      const { data, error } = await supabase
+      setLoading(true);
+      // Fetch the last 20 records
+      let query = supabase
         .from('attendance')
         .select('*')
-        .order('date', { ascending: false })
-        .limit(30);
+        .order('check_in', { ascending: false })
+        .limit(20);
 
-      if (error) {
-        console.error('Error fetching attendance:', error);
-      } else {
-        setAttendance(data || []);
-        const todayRecord = data?.find((record) => record.date === today);
-        if (todayRecord) {
-          setTodayAttendance(todayRecord);
-          setIsCheckedIn(todayRecord.check_in !== null && todayRecord.check_out === null);
-        }
+      if (!isAdmin) {
+        query = query.eq('employee_id', user?.id);
       }
-    } catch (error) {
-      console.error('Unexpected error fetching attendance:', error);
-      setAttendance([]);
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      setAttendance(data || []);
+      
+      // LOGIC FIX: Find the most RECENT record where check_out is null
+      const open = data?.find(r => r.employee_id === user?.id && r.check_out === null);
+      setActiveSession(open || null);
+    } catch (error: any) {
+      toast.error("Fetch Error: " + error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleCheckIn = async () => {
-    const today = new Date().toISOString().split('T')[0];
-    const now = new Date().toISOString();
-
+  const handleAction = async () => {
+    if (!user?.id) return;
+    setBtnLoading(true);
     try {
-      const { error } = await supabase
-        .from('attendance')
-        .insert({
-          date: today,
-          check_in: now,
-          status: 'Present',
+      if (!activeSession) {
+        // CLOCK IN
+        const { error } = await supabase.from('attendance').insert({ 
+          employee_id: user.id, 
+          check_in: new Date().toISOString(),
+          status: 'Present'
         });
-
-      if (error) {
-        console.error('Error checking in:', error);
-        toast.error(`Failed to check in: ${error.message}`);
+        if (error) throw error;
+        toast.success("Good morning! Clocked in.");
       } else {
-        toast.success('Checked in successfully');
-        fetchAttendance();
+        // CLOCK OUT
+        const { error } = await supabase
+          .from('attendance')
+          .update({ check_out: new Date().toISOString() })
+          .eq('id', activeSession.id);
+        if (error) throw error;
+        toast.success("Work finished! Clocked out.");
       }
-    } catch (error) {
-      console.error('Unexpected error checking in:', error);
-      toast.error('An unexpected error occurred');
+      await fetchAttendance(); // Refresh list and button state
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setBtnLoading(false);
     }
   };
 
-  const handleCheckOut = async () => {
-    if (!todayAttendance) return;
-
-    const now = new Date().toISOString();
-    const checkInTime = new Date(todayAttendance.check_in!);
-    const checkOutTime = new Date(now);
-    const hours = (checkOutTime.getTime() - checkInTime.getTime()) / (1000 * 60 * 60);
-
-    try {
-      const { error } = await supabase
-        .from('attendance')
-        .update({
-          check_out: now,
-          total_hours: hours.toFixed(2),
-        })
-        .eq('id', todayAttendance.id);
-
-      if (error) {
-        console.error('Error checking out:', error);
-        toast.error(`Failed to check out: ${error.message}`);
-      } else {
-        toast.success('Checked out successfully');
-        fetchAttendance();
-      }
-    } catch (error) {
-      console.error('Unexpected error checking out:', error);
-      toast.error('An unexpected error occurred');
-    }
-  };
-
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: true,
-    });
-  };
-
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  };
-
-  const formatDbTime = (timestamp: string | null) => {
-    if (!timestamp) return '-';
-    return new Date(timestamp).toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-    });
-  };
-
-  const formatDbDate = (date: string) => {
-    return new Date(date).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  };
+  if (loading) return <div className="p-20 text-center"><Loader2 className="animate-spin mx-auto text-primary" /></div>;
 
   return (
-    <div className="p-8 space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-primary">Attendance</h1>
-        <p className="text-muted-foreground mt-1">
-          Track your daily attendance and working hours
-        </p>
+    <div className="p-8 space-y-8 max-w-5xl mx-auto">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">Attendance</h1>
+        <Button variant="outline" size="sm" onClick={fetchAttendance}>
+          <RefreshCcw className="h-4 w-4 mr-2" /> Refresh
+        </Button>
       </div>
-
-      <Card className="border-none shadow-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5" />
-            Clock In / Clock Out
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="text-center space-y-2">
-            <div className="text-5xl font-bold text-primary tabular-nums">
-              {formatTime(currentTime)}
-            </div>
-            <div className="text-sm text-muted-foreground">
-              {formatDate(currentTime)}
-            </div>
+      
+      <Card className="p-12 text-center shadow-lg border-t-4 border-primary">
+        <div className="flex flex-col items-center space-y-6">
+          <div className={`p-5 rounded-full ${activeSession ? 'bg-green-100' : 'bg-slate-100'}`}>
+            <Clock className={`h-12 w-12 ${activeSession ? 'text-green-600' : 'text-slate-400'}`} />
           </div>
-
-          <div className="flex gap-4 justify-center">
-            {!isCheckedIn ? (
-              <Button
-                size="lg"
-                onClick={handleCheckIn}
-                className="min-w-[200px]"
-                disabled={todayAttendance?.check_in !== undefined}
-              >
-                <LogIn className="mr-2 h-5 w-5" />
-                Clock In
-              </Button>
-            ) : (
-              <Button
-                size="lg"
-                onClick={handleCheckOut}
-                variant="destructive"
-                className="min-w-[200px]"
-              >
-                <LogOut className="mr-2 h-5 w-5" />
-                Clock Out
-              </Button>
+          
+          <div>
+            <h2 className="text-2xl font-bold">{activeSession ? "You're on the clock!" : "Ready to start?"}</h2>
+            {activeSession && (
+              <p className="text-slate-500 mt-1">Shift started at: {new Date(activeSession.check_in).toLocaleTimeString()}</p>
             )}
           </div>
 
-          {todayAttendance && (
-            <div className="grid grid-cols-3 gap-4 pt-4 border-t">
-              <div className="text-center">
-                <div className="text-sm text-muted-foreground">Check In</div>
-                <div className="text-lg font-semibold">
-                  {formatDbTime(todayAttendance.check_in)}
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="text-sm text-muted-foreground">Check Out</div>
-                <div className="text-lg font-semibold">
-                  {formatDbTime(todayAttendance.check_out)}
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="text-sm text-muted-foreground">Total Hours</div>
-                <div className="text-lg font-semibold">
-                  {todayAttendance.total_hours
-                    ? `${todayAttendance.total_hours}h`
-                    : '-'}
-                </div>
-              </div>
-            </div>
-          )}
-        </CardContent>
+          <Button 
+            size="lg" 
+            disabled={btnLoading}
+            className={`w-64 h-14 text-lg ${activeSession ? 'bg-red-600 hover:bg-red-700' : 'bg-primary'}`}
+            onClick={handleAction}
+          >
+            {btnLoading ? (
+              <Loader2 className="animate-spin" />
+            ) : activeSession ? (
+              <><LogOut className="mr-2" /> Clock Out</>
+            ) : (
+              <><LogIn className="mr-2" /> Clock In</>
+            )}
+          </Button>
+        </div>
       </Card>
 
-      <Card className="border-none shadow-sm">
-        <CardHeader>
-          <CardTitle>Attendance History</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Check In</TableHead>
-                <TableHead>Check Out</TableHead>
-                <TableHead>Total Hours</TableHead>
+      <div className="rounded-md border bg-white">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Status</TableHead>
+              <TableHead>Check In</TableHead>
+              <TableHead>Check Out</TableHead>
+              <TableHead className="text-right">Date</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {attendance.map((r) => (
+              <TableRow key={r.id}>
+                <TableCell>
+                  <span className={`px-2 py-1 rounded text-xs font-bold ${r.check_out ? 'bg-slate-100 text-slate-600' : 'bg-green-100 text-green-700'}`}>
+                    {r.check_out ? 'Finished' : 'ACTIVE'}
+                  </span>
+                </TableCell>
+                <TableCell className="font-medium">{new Date(r.check_in).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</TableCell>
+                <TableCell>{r.check_out ? new Date(r.check_out).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--'}</TableCell>
+                <TableCell className="text-right text-slate-500">{new Date(r.check_in).toLocaleDateString()}</TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {attendance.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground">
-                    No attendance records found
-                  </TableCell>
-                </TableRow>
-              ) : (
-                attendance.map((record) => (
-                  <TableRow key={record.id}>
-                    <TableCell className="font-medium">
-                      {formatDbDate(record.date)}
-                    </TableCell>
-                    <TableCell>
-                      <span
-                        className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                          record.status === 'Present'
-                            ? 'bg-green-100 text-green-800'
-                            : record.status === 'Absent'
-                            ? 'bg-red-100 text-red-800'
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}
-                      >
-                        {record.status}
-                      </span>
-                    </TableCell>
-                    <TableCell>{formatDbTime(record.check_in)}</TableCell>
-                    <TableCell>{formatDbTime(record.check_out)}</TableCell>
-                    <TableCell>
-                      {record.total_hours ? `${record.total_hours}h` : '-'}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }

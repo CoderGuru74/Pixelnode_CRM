@@ -1,24 +1,23 @@
-import { createClient } from '@supabase/supabase-js';
+import { createBrowserClient } from '@supabase/ssr'
 
-// Check environment variables
+// Check environment variables to prevent silent failures
 if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
-  console.error('MISSING: NEXT_PUBLIC_SUPABASE_URL');
-  throw new Error('Supabase URL is not configured');
+  throw new Error('MISSING: NEXT_PUBLIC_SUPABASE_URL');
 }
 
 if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-  console.error('MISSING: NEXT_PUBLIC_SUPABASE_ANON_KEY');
-  throw new Error('Supabase Anon Key is not configured');
+  throw new Error('MISSING: NEXT_PUBLIC_SUPABASE_ANON_KEY');
 }
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    flowType: 'pkce',
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-  },
-});
+/**
+ * We use createBrowserClient from @supabase/ssr to ensure 
+ * that Auth sessions are stored in COOKIES. 
+ * This allows our Middleware to see the user and handle redirects correctly.
+ */
+export const supabase = createBrowserClient(
+  supabaseUrl,
+  supabaseAnonKey
+);
