@@ -1,23 +1,19 @@
 import { createBrowserClient } from '@supabase/ssr'
 
-// Check environment variables to prevent silent failures
-if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
-  throw new Error('MISSING: NEXT_PUBLIC_SUPABASE_URL');
+if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  throw new Error('Missing Supabase Environment Variables');
 }
 
-if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-  throw new Error('MISSING: NEXT_PUBLIC_SUPABASE_ANON_KEY');
-}
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-/**
- * We use createBrowserClient from @supabase/ssr to ensure 
- * that Auth sessions are stored in COOKIES. 
- * This allows our Middleware to see the user and handle redirects correctly.
- */
 export const supabase = createBrowserClient(
-  supabaseUrl,
-  supabaseAnonKey
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  {
+    auth: {
+      // This is the CRITICAL fix for the "Lock broken" / "steal" error
+      // It prevents multiple tabs/refreshes from fighting over the session lock
+      lockType: 'custom',
+      serialize: (data) => JSON.stringify(data),
+      parse: (data) => JSON.parse(data),
+    }
+  }
 );
