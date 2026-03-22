@@ -27,22 +27,23 @@ export function Sidebar() {
   const { employee, isAdmin, signOut } = useAuth();
 
   // Define Navigation based on Admin status
-  // Note: Ensure href matches your folder structure (e.g., /dashboard/admin vs /dashboard/employee)
+  // We updated these paths to match your new folder structure:
+  // /dashboard/admin/projects and /dashboard/admin/tasks
   const navigation = isAdmin ? [
     { name: 'Dashboard', href: '/dashboard/admin', icon: LayoutDashboard },
-    { name: 'Projects', href: '/products', icon: Package },
-    { name: 'Tasks', href: '/tasks', icon: CheckSquare },
-    { name: 'Daily Reports', href: '/daily-reports', icon: FileText },
-    { name: 'Attendance', href: '/attendance', icon: Clock },
-    { name: 'Leaves', href: '/leaves', icon: Calendar },
-    { name: 'Reports', href: '/reports', icon: BarChart3 },
-    { name: 'Account Settings', href: '/account', icon: Settings },
+    { name: 'Projects', href: '/dashboard/admin/projects', icon: Package },
+    { name: 'Tasks', href: '/dashboard/admin/tasks', icon: CheckSquare },
+    { name: 'Daily Reports', href: '/dashboard/admin/daily-reports', icon: FileText },
+    { name: 'Attendance', href: '/dashboard/admin/attendance', icon: Clock },
+    { name: 'Leaves', href: '/dashboard/admin/leaves', icon: Calendar },
+    { name: 'Reports', href: '/dashboard/admin/reports', icon: BarChart3 },
+    { name: 'Account Settings', href: '/dashboard/admin/account', icon: Settings },
   ] : [
     { name: 'Dashboard', href: '/dashboard/employee', icon: LayoutDashboard },
-    { name: 'My Tasks', href: '/tasks', icon: CheckSquare },
-    { name: 'Daily Reports', href: '/daily-reports', icon: FileText },
-    { name: 'Attendance', href: '/attendance', icon: Clock },
-    { name: 'Leaves', href: '/leaves', icon: Calendar },
+    { name: 'My Tasks', href: '/dashboard/employee/tasks', icon: CheckSquare },
+    { name: 'Daily Reports', href: '/dashboard/employee/daily-reports', icon: FileText },
+    { name: 'Attendance', href: '/dashboard/employee/attendance', icon: Clock },
+    { name: 'Leaves', href: '/dashboard/employee/leaves', icon: Calendar },
   ];
 
   return (
